@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Erasmus Ljubljana 26/27</title>
+    <meta name="description"
+        content="Dashboard interactiu per visualitzar les dades dels estudiants Erasmus per ciutat, carrera i província d'origen." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <!-- ==================== HEADER ==================== -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <span class="material-icons-round header-icon">flight_takeoff</span>
+                <div>
+                    <h1 data-i18n="header_title">Erasmus Ljubljana 26/27</h1>
+                    <p class="header-subtitle" data-i18n="header_subtitle">Visualiza los datos de los estudiantes</p>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-pill">
+                    <span class="material-icons-round">people</span>
+                    <span id="stat-total">0</span>
+                    <span data-i18n="stat_students">Estudiantes</span>
+                </div>
+                <div class="stat-pill">
+                    <span class="material-icons-round">location_city</span>
+                    <span id="stat-cities">0</span>
+                    <span data-i18n="stat_cities">Ciudades</span>
+                </div>
+                <div class="stat-pill">
+                    <span class="material-icons-round">school</span>
+                    <span id="stat-careers">0</span>
+                    <span data-i18n="stat_careers">Carreras</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="lang-toggle" id="lang-toggle">
+                    <button class="lang-btn active" data-lang="es">ES</button>
+                    <button class="lang-btn" data-lang="ca">CA</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="dashboard">
+            <span class="material-icons-round">dashboard</span>
+            <span data-i18n="tab_dashboard">Dashboard</span>
+        </button>
+        <button class="tab-btn" data-tab="table">
+            <span class="material-icons-round">table_chart</span>
+            <span data-i18n="tab_table">Tabla de Datos</span>
+        </button>
+    </nav>
+
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="tab-dashboard" class="tab-content active">
+            <!-- ==================== SEARCH SECTION ==================== -->
+            <section class="search-section">
+                <div class="search-card">
+                    <div class="search-header">
+                        <span class="material-icons-round">search</span>
+                        <h2 data-i18n="search_title">Buscar Estudiantes</h2>
+                    </div>
+                    <div class="search-inputs">
+                        <div class="input-group">
+                            <label for="search-city">
+                                <span class="material-icons-round">location_city</span>
+                                <span data-i18n="origin_city">Ciudad de origen</span>
+                            </label>
+                            <input type="text" id="search-city" placeholder="Escribe una ciudad..."
+                                data-i18n-attr="placeholder:search_city_placeholder" autocomplete="off" />
+                            <div class="autocomplete-list" id="city-autocomplete"></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="search-career">
+                                <span class="material-icons-round">school</span>
+                                <span data-i18n="career">Carrera</span>
+                            </label>
+                            <input type="text" id="search-career" placeholder="Escribe una carrera..."
+                                data-i18n-attr="placeholder:search_career_placeholder" autocomplete="off" />
+                            <div class="autocomplete-list" id="career-autocomplete"></div>
+                        </div>
+                    </div>
+                    <button class="btn-clear" id="btn-clear" style="display:none">
+                        <span class="material-icons-round">clear</span>
+                        <span data-i18n="clear_filters">Borrar filtros</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ==================== RESULTS SECTION ==================== -->
+            <section class="results-section" id="results-section" style="display:none">
+                <div class="results-header">
+                    <h2 id="results-title">Resultats</h2>
+                    <span class="results-count" id="results-count">0 estudiants</span>
+                </div>
+                <div class="results-grid" id="results-grid"></div>
+            </section>
+
+            <!-- ==================== MAP SECTION ==================== -->
+            <section class="map-section">
+                <div class="map-card">
+                    <div class="map-header">
+                        <div>
+                            <h2>
+                                <span class="material-icons-round">map</span>
+                                <span data-i18n="map_title">Mapa de Provincias</span>
+                            </h2>
+                            <p data-i18n="map_subtitle">Pasa el ratón por las provincias para ver los estudiantes</p>
+                        </div>
+                        <div class="map-legend">
+                            <span class="legend-label">0</span>
+                            <div class="legend-gradient"></div>
+                            <span class="legend-label" id="legend-max">10+</span>
+                        </div>
+                    </div>
+                    <div class="map-container" id="map-container">
+                        <!-- Map will be injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== ADD USER SECTION ==================== -->
+            <section class="add-section">
+                <div class="add-card">
+                    <div class="add-header">
+                        <span class="material-icons-round">person_add</span>
+                        <h2 data-i18n="add_student">Añadir Estudiante</h2>
+                    </div>
+                    <form id="add-form" class="add-form">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="add-name">
+                                    <span class="material-icons-round">badge</span>
+                                    <span data-i18n="name">Nombre</span>
+                                </label>
+                                <input type="text" id="add-name" placeholder="Nombre del estudiante"
+                                    data-i18n-attr="placeholder:name_placeholder" required />
+                            </div>
+                            <div class="input-group">
+                                <label for="add-career">
+                                    <span class="material-icons-round">school</span>
+                                    <span data-i18n="career">Carrera</span>
+                                </label>
+                                <input type="text" id="add-career" placeholder="Carrera universitaria"
+                                    data-i18n-attr="placeholder:career_placeholder" required />
+                            </div>
+                            <div class="input-group">
+                                <label for="add-origin">
+                                    <span class="material-icons-round">place</span>
+                                    <span data-i18n="origin">Origen</span>
+                                </label>
+                                <input type="text" id="add-origin" placeholder="Ciudad de origen"
+                                    data-i18n-attr="placeholder:origin_placeholder" required />
+                            </div>
+                            <div class="input-group">
+                                <label for="add-phone">
+                                    <span class="material-icons-round">phone</span>
+                                    <span data-i18n="phone">Teléfono</span>
+                                </label>
+                                <input type="text" id="add-phone" placeholder="Ej: 600 000 000"
+                                    data-i18n-attr="placeholder:phone_placeholder" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-add">
+                            <span class="material-icons-round">add_circle</span>
+                            <span data-i18n="add_btn">Añadir Estudiante</span>
+                        </button>
+                    </form>
+                    <div class="form-feedback" id="form-feedback"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Table Tab -->
+        <div id="tab-table" class="tab-content">
+            <section class="table-section">
+                <div class="table-card">
+                    <div class="table-header">
+                        <div class="table-header-left">
+                            <span class="material-icons-round">list_alt</span>
+                            <h2 data-i18n="table_title">Gestión de Estudiantes</h2>
+                        </div>
+                        <div class="table-actions">
+                            <input type="text" id="table-search" placeholder="Búsqueda rápida..."
+                                data-i18n-attr="placeholder:quick_search_placeholder" class="table-search-input" />
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="student-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="name">Nombre</th>
+                                    <th data-i18n="career">Carrera</th>
+                                    <th data-i18n="origin">Origen</th>
+                                    <th data-i18n="phone">Teléfono</th>
+                                    <th style="width: 100px;" data-i18n="actions">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- Table rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-i18n="edit_modal_title">Editar Estudiante</h2>
+                <button id="close-modal" class="btn-icon">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <form id="edit-form" class="edit-form">
+                <input type="hidden" id="edit-index" />
+                <div class="input-group">
+                    <label for="edit-name" data-i18n="name">Nombre</label>
+                    <input type="text" id="edit-name" required />
+                </div>
+                <div class="input-group">
+                    <label for="edit-career" data-i18n="career">Carrera</label>
+                    <input type="text" id="edit-career" required />
+                </div>
+                <div class="input-group">
+                    <label for="edit-origin" data-i18n="origin">Origen</label>
+                    <input type="text" id="edit-origin" required />
+                </div>
+                <div class="input-group">
+                    <label for="edit-phone" data-i18n="phone">Teléfono</label>
+                    <input type="text" id="edit-phone" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="cancel-edit" class="btn-secondary" data-i18n="cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary" data-i18n="save_changes">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="footer">
+        <p data-i18n="footer_text">Erasmus Ljubljana 26/27 &copy; 2026 — Datos de los estudiantes Erasmus</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
