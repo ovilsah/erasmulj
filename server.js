@@ -157,7 +157,20 @@ function saveToExcel(students) {
     } catch (e) { console.error('Excel save failed:', e); }
 }
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`\n🎓 Erasmus Dashboard running at http://localhost:${PORT}\n`);
-});
+// Start server with fallback ports
+const startServer = (portToTry) => {
+    const server = app.listen(portToTry, () => {
+        console.log(`\n🎓 Erasmus Dashboard running at http://localhost:${portToTry}\n`);
+    });
+    
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`Port ${portToTry} is in use, trying ${portToTry + 1}...`);
+            startServer(portToTry + 1);
+        } else {
+            throw err;
+        }
+    });
+};
+
+startServer(PORT);
