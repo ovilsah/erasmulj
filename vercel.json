@@ -1,14 +1,37 @@
 {
-  "functions": {
-    "api/index.js": {
-      "memory": 1024,
-      "maxDuration": 10,
-      "includeFiles": "data.json"
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["data.json", "dadeserasmus.xlsx"]
+      }
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dashboard.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "styles.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "spain-provinces.geojson",
+      "use": "@vercel/static"
     }
-  },
-  "rewrites": [
-    { "source": "/data", "destination": "/api/index.js" },
-    { "source": "/add", "destination": "/api/index.js" },
-    { "source": "/update", "destination": "/api/index.js" }
+  ],
+  "routes": [
+    { "src": "/data", "dest": "/api/index.js" },
+    { "src": "/add", "dest": "/api/index.js" },
+    { "src": "/update", "dest": "/api/index.js" },
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/dashboard.js", "dest": "/dashboard.js" },
+    { "src": "/styles.css", "dest": "/styles.css" },
+    { "src": "/spain-provinces.geojson", "dest": "/spain-provinces.geojson" }
   ]
 }
