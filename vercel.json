@@ -5,7 +5,10 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["data.json", "dadeserasmus.xlsx"]
+        "includeFiles": [
+          "data.json",
+          "dadeserasmus.xlsx"
+        ]
       }
     },
     {
@@ -26,12 +29,37 @@
     }
   ],
   "routes": [
-    { "src": "/data", "dest": "/api/index.js" },
-    { "src": "/add", "dest": "/api/index.js" },
-    { "src": "/update", "dest": "/api/index.js" },
-    { "src": "/", "dest": "/index.html" },
-    { "src": "/dashboard.js", "dest": "/dashboard.js" },
-    { "src": "/styles.css", "dest": "/styles.css" },
-    { "src": "/spain-provinces.geojson", "dest": "/spain-provinces.geojson" }
+    {
+      "src": "/data",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/add",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/update/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/delete/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/dashboard.js",
+      "dest": "/dashboard.js"
+    },
+    {
+      "src": "/styles.css",
+      "dest": "/styles.css"
+    },
+    {
+      "src": "/spain-provinces.geojson",
+      "dest": "/spain-provinces.geojson"
+    }
   ]
 }
