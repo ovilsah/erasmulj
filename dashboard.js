@@ -324,14 +324,21 @@ function showResults(filtered, title) {
     if (titleEl) titleEl.textContent = title || t('results');
     const unit = filtered.length === 1 ? t('student_unit') : t('students_unit');
     if (countEl) countEl.textContent = `${filtered.length} ${unit}`;
-    grid.innerHTML = filtered.map((s, i) => `
+
+    grid.innerHTML = filtered.map((s, i) => {
+        let semText = '';
+        if (s.semestre) {
+            semText = s.semestre === '1r' ? t('sem_1') : s.semestre === '2n' ? t('sem_2') : (s.semestre === 'Anual' ? t('sem_annual') : t('sem_1'));
+        }
+
+        return `
     <div class="student-card" style="animation-delay: ${i * 0.04}s">
       <div class="card-name"><span class="material-icons-round">person</span>${escapeHtml(s.nom)}</div>
       <div class="card-detail"><span class="material-icons-round">school</span>${escapeHtml(s.carrera)}</div>
       <div class="card-detail"><span class="material-icons-round">place</span>${escapeHtml(s.origen)}</div>
       ${s.telefon ? `<div class="card-detail"><span class="material-icons-round">phone</span>${escapeHtml(s.telefon)}</div>` : ''}
-      <div class="card-detail"><span class="material-icons-round">event</span>${s.semestre ? (s.semestre === '1r' ? t('sem_1') : s.semestre === '2n' ? t('sem_2') : t('sem_annual')) : t('sem_1')}</div>
-    </div>`).join('');
+      ${semText ? `<div class="card-detail"><span class="material-icons-round">event</span>${semText}</div>` : ''}
+    </div>`}).join('');
     section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -356,7 +363,7 @@ function renderTable() {
     );
     body.innerHTML = filtered.map((s) => {
         const realIndex = students.indexOf(s);
-        const semLabel = s.semestre === '1r' ? t('sem_1') : s.semestre === '2n' ? t('sem_2') : (s.semestre === 'Anual' ? t('sem_annual') : t('sem_1'));
+        const semLabel = s.semestre ? (s.semestre === '1r' ? t('sem_1') : s.semestre === '2n' ? t('sem_2') : (s.semestre === 'Anual' ? t('sem_annual') : s.semestre)) : '-';
         return `
         <tr>
             <td><strong>${escapeHtml(s.nom)}</strong></td>
@@ -448,7 +455,7 @@ window.openEditModal = (idx) => {
     document.getElementById('edit-career').value = s.carrera;
     document.getElementById('edit-origin').value = s.origen;
     document.getElementById('edit-phone').value = s.telefon || '';
-    document.getElementById('edit-semester').value = s.semestre || '1r';
+    document.getElementById('edit-semester').value = s.semestre || '';
     modal.classList.add('active');
 };
 

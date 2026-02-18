@@ -33,7 +33,7 @@ const studentSchema = new mongoose.Schema({
     carrera: String,
     origen: String,
     telefon: String,
-    semestre: { type: String, enum: ['1r', '2n', 'Anual'], default: '1r' }
+    semestre: { type: String, enum: ['1r', '2n', 'Anual'] }
 });
 // Avoid recompiling model if hot-reloaded
 const Student = mongoose.models.Student || mongoose.model('Student', studentSchema);

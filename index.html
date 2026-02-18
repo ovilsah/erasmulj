@@ -170,6 +170,18 @@
                                     data-i18n-attr="placeholder:origin_placeholder" required />
                             </div>
                             <div class="input-group">
+                                <label for="add-semester">
+                                    <span class="material-icons-round">event</span>
+                                    <span data-i18n="semester_label">Semestre</span>
+                                </label>
+                                <select id="add-semester">
+                                    <option value="" data-i18n="sem_none">Seleccionar...</option>
+                                    <option value="1r" data-i18n="sem_1">1r Semestre</option>
+                                    <option value="2n" data-i18n="sem_2">2n Semestre</option>
+                                    <option value="Anual" data-i18n="sem_annual">Anual</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
                                 <label for="add-phone">
                                     <span class="material-icons-round">phone</span>
                                     <span data-i18n="phone">Teléfono</span>
@@ -249,7 +261,8 @@
                 </div>
                 <div class="input-group">
                     <label for="edit-semester" data-i18n="semester_label">Semestre</label>
-                    <select id="edit-semester" required>
+                    <select id="edit-semester">
+                        <option value="" data-i18n="sem_none">Seleccionar...</option>
                         <option value="1r" data-i18n="sem_1">1r Semestre</option>
                         <option value="2n" data-i18n="sem_2">2n Semestre</option>
                         <option value="Anual" data-i18n="sem_annual">Anual</option>
