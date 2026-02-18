@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 const DATA_FILE = path.join(__dirname, 'data.json');
 const EXCEL_FILE = path.join(__dirname, 'dadeserasmus.xlsx');
