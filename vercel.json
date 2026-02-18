@@ -1,8 +1,14 @@
 {
-  "rewrites": [
-    { "source": "/data", "destination": "/api/index.js" },
-    { "source": "/add", "destination": "/api/index.js" },
-    { "source": "/update", "destination": "/api/index.js" }
-    
+  "functions": {
+    "api/index.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    { "src": "/data", "dest": "/api/index.js" },
+    { "src": "/add", "dest": "/api/index.js" },
+    { "src": "/update", "dest": "/api/index.js" },
+    { "src": "/(.*)", "dest": "/" }
   ]
 }
