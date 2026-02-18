@@ -67,11 +67,12 @@ app.post('/add', async (req, res) => {
             carrera: normalizeCarrera(carrera),
             origen: origen.trim(),
             telefon: (telefon || "").trim(),
-            semestre: semestre || '1r'
+            semestre: semestre || null
         });
         await student.save();
         res.json({ success: true, student });
     } catch (err) {
+        console.error("Save failed:", err);
         res.status(500).json({ error: 'Save failed' });
     }
 });
@@ -90,7 +91,7 @@ app.put('/update/:id', async (req, res) => {
                 carrera: normalizeCarrera(carrera),
                 origen: origen.trim(),
                 telefon: (telefon || "").trim(),
-                semestre: semestre || '1r'
+                semestre: semestre || null
             },
             { new: true } // Return the updated document
         );
@@ -98,9 +99,9 @@ app.put('/update/:id', async (req, res) => {
         if (!updatedStudent) {
             return res.status(404).json({ error: 'Student not found' });
         }
-
         res.json({ success: true, student: updatedStudent });
     } catch (err) {
+        console.error("Update failed:", err);
         res.status(500).json({ error: 'Update failed' });
     }
 });
