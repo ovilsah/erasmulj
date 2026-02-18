@@ -1,7 +1,18 @@
 {
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
   "rewrites": [
-    { "source": "/data", "destination": "/api" },
-    { "source": "/add", "destination": "/api" },
-    { "source": "/update", "destination": "/api" }
+    { "source": "/data", "destination": "/api/index.js" },
+    { "source": "/add", "destination": "/api/index.js" },
+    { "source": "/update", "destination": "/api/index.js" },
+    { "source": "/", "destination": "/index.html" }
   ]
 }

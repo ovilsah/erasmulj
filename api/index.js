@@ -1,152 +1,89 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const XLSX = require('xlsx');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-const DATA_FILE = path.join(process.cwd(), 'data.json');
-const EXCEL_FILE = path.join(process.cwd(), 'dadeserasmus.xlsx');
-
-// Middleware
 app.use(express.json());
 
-// In Vercel, static files are served by Vercel edge network, not Express.
-// But locally, we need Express to serve them.
-if (process.env.NODE_ENV !== 'production') {
-    app.use(express.static(path.join(__dirname, '..')));
-}
-
-// MongoDB Setup
+// MongoDB - Using cached connection for serverless
+let conn = null;
 const mongoUri = process.env.MONGODB_URI;
-let useMongo = false;
 
-if (mongoUri) {
-    mongoose.connect(mongoUri)
-        .then(() => {
-            console.log('✅ Connected to MongoDB');
-            useMongo = true;
-        })
-        .catch(err => console.error('❌ MongoDB Connection Error:', err));
+if (!mongoUri) {
+  console.error("❌ MONGODB_URI is missing in environment variables.");
 }
 
-// Student Schema
-const studentSchema = new mongoose.Schema({
-    nom: String,
-    carrera: String,
-    origen: String,
-    telefon: String
-});
-const Student = mongoose.model('Student', studentSchema);
+const connectDB = async () => {
+    if (conn) return conn;
+    try {
+        conn = await mongoose.connect(mongoUri, {
+            serverSelectionTimeoutMS: 5000, // Fail fast if no connection
+            socketTimeoutMS: 45000, // Close sockets after 45s
+        });
+        console.log("✅ New MongoDB Connection Established");
+        return conn;
+    } catch (e) {
+        console.error("❌ MongoDB Connection Fail:", e);
+        throw e;
+    }
+};
 
-// Helper to normalize engineering career names
+const studentSchema = new mongoose.Schema({
+    nom: String, carrera: String, origen: String, telefon: String
+});
+// Avoid recompiling model if hot-reloaded
+const Student = mongoose.models.Student || mongoose.model('Student', studentSchema);
+
+// Helper
 function normalizeCarrera(carrera) {
     if (!carrera) return "";
     return carrera.replace(/Enginyeria|Ingenieria|Ingenería|Ingeneria|Ing\./gi, "Ingeniería").trim();
 }
 
-// GET /data
+// Routes
 app.get('/data', async (req, res) => {
     try {
-        if (useMongo) {
-            const students = await Student.find({});
-            return res.json(students);
-        }
-        if (fs.existsSync(DATA_FILE)) {
-            const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-            res.json(data);
-        } else {
-            res.json([]);
-        }
+        await connectDB();
+        const students = await Student.find({});
+        res.json(students);
     } catch (err) {
-        res.status(500).json({ error: 'Could not read data' });
+        console.error(err);
+        res.status(500).json({ error: 'DB Error' });
     }
 });
 
-// POST /add
 app.post('/add', async (req, res) => {
     const { nom, carrera, origen, telefon } = req.body;
     if (!nom || !carrera || !origen) return res.status(400).json({ error: 'Missing fields' });
 
-    const newStudentData = {
-        nom: nom.trim(),
-        carrera: normalizeCarrera(carrera),
-        origen: origen.trim(),
-        telefon: (telefon || "").trim()
-    };
-
     try {
-        if (useMongo) {
-            const student = new Student(newStudentData);
-            await student.save();
-            return res.json({ success: true, student });
-        }
-        
-        let data = [];
-        if (fs.existsSync(DATA_FILE)) {
-             data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-        }
-        data.push(newStudentData);
-        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-        try { saveToExcel(data); } catch (e) {}
-        res.json({ success: true, student: newStudentData });
-
+        await connectDB();
+        const student = new Student({
+            nom: nom.trim(),
+            carrera: normalizeCarrera(carrera),
+            origen: origen.trim(),
+            telefon: (telefon || "").trim()
+        });
+        await student.save();
+        res.json({ success: true, student });
     } catch (err) {
-        if (useMongo && err.code !== 'EROFS') {
-             console.error('DB Error:', err);
-             return res.status(500).json({ error: 'DB Error' });
-        } else if (err.code === 'EROFS') {
-             console.log('Read-only filesystem, cannot save file locally.');
-             return res.status(500).json({ error: 'Cannot save: Configuring MongoDB is required on this server.' });
-        }
-        console.error('Error adding student:', err);
-        res.status(500).json({ error: 'Could not save student' });
+        res.status(500).json({ error: 'Save failed' });
     }
 });
 
-// POST /update
 app.post('/update', async (req, res) => {
     const { students } = req.body;
     if (!Array.isArray(students)) return res.status(400).json({ error: 'Invalid data' });
 
     try {
+        await connectDB();
         const normalized = students.map(s => ({ ...s, carrera: normalizeCarrera(s.carrera) }));
-        
-        if (useMongo) {
-            await Student.deleteMany({});
-            await Student.insertMany(normalized);
-            return res.json({ success: true });
-        }
-
-        fs.writeFileSync(DATA_FILE, JSON.stringify(normalized, null, 2), 'utf-8');
-        try { saveToExcel(normalized); } catch (e) {}
+        await Student.deleteMany({});
+        await Student.insertMany(normalized);
         res.json({ success: true });
     } catch (err) {
-         if (err.code === 'EROFS') {
-             return res.status(500).json({ error: 'Cannot save: Configuring MongoDB is required on this server.' });
-        }
-        console.error('Error updating:', err);
-        res.status(500).json({ error: 'Could not update data' });
+        res.status(500).json({ error: 'Update failed' });
     }
 });
 
-function saveToExcel(students) {
-    const wb = XLSX.utils.book_new();
-    const excelData = students.map(s => ({
-        'Nom': s.nom, 'Carrera': s.carrera, 'Origen': s.origen, 'Telèfon': s.telefon || ""
-    }));
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Dades');
-    XLSX.writeFile(wb, EXCEL_FILE);
-}
-
-// For local dev
-if (require.main === module) {
-    app.listen(PORT, () => console.log(`Server running locally on port ${PORT}`));
-}
-
-// Export for Vercel
 module.exports = app;
