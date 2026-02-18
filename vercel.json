@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/data", "destination": "/server.js" },
-    { "source": "/add", "destination": "/server.js" },
-    { "source": "/update", "destination": "/server.js" }
+    { "source": "/data", "destination": "/api" },
+    { "source": "/add", "destination": "/api" },
+    { "source": "/update", "destination": "/api" }
   ]
 }
