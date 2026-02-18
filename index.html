@@ -190,36 +190,33 @@
 
         <!-- Table Tab -->
         <div id="tab-table" class="tab-content">
-            <section class="table-section">
-                <div class="table-card">
-                    <div class="table-header">
-                        <div class="table-header-left">
-                            <span class="material-icons-round">list_alt</span>
-                            <h2 data-i18n="table_title">Gestión de Estudiantes</h2>
-                        </div>
-                        <div class="table-actions">
-                            <input type="text" id="table-search" placeholder="Búsqueda rápida..."
-                                data-i18n-attr="placeholder:quick_search_placeholder" class="table-search-input" />
-                        </div>
-                    </div>
-                    <div class="table-wrapper">
-                        <table id="student-table">
-                            <thead>
-                                <tr>
-                                    <th data-i18n="name">Nombre</th>
-                                    <th data-i18n="career">Carrera</th>
-                                    <th data-i18n="origin">Origen</th>
-                                    <th data-i18n="phone">Teléfono</th>
-                                    <th style="width: 100px;" data-i18n="actions">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-body">
-                                <!-- Table rows injected here -->
-                            </tbody>
-                        </table>
+            <!-- Table Section -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2 data-i18n="table_title">Gestión de Estudiantes</h2>
+                    <div class="search-box">
+                        <span class="material-icons-round search-icon">search</span>
+                        <input type="text" id="table-search" placeholder="Búsqueda rápida..." />
                     </div>
                 </div>
-            </section>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="name">Nombre</th>
+                                <th data-i18n="career">Carrera</th>
+                                <th data-i18n="origin">Origen</th>
+                                <th data-i18n="phone">Teléfono</th>
+                                <th data-i18n="semester_label">Semestre</th>
+                                <th data-i18n="actions">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- JS fill -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -250,8 +247,17 @@
                     <label for="edit-phone" data-i18n="phone">Teléfono</label>
                     <input type="text" id="edit-phone" />
                 </div>
+                <div class="input-group">
+                    <label for="edit-semester" data-i18n="semester_label">Semestre</label>
+                    <select id="edit-semester" required>
+                        <option value="1r" data-i18n="sem_1">1r Semestre</option>
+                        <option value="2n" data-i18n="sem_2">2n Semestre</option>
+                        <option value="Anual" data-i18n="sem_annual">Anual</option>
+                    </select>
+                </div>
                 <div class="modal-footer">
                     <button type="button" id="cancel-edit" class="btn-secondary" data-i18n="cancel">Cancelar</button>
+                    <button type="button" class="btn-delete" id="delete-student" data-i18n="delete">Eliminar</button>
                     <button type="submit" class="btn-primary" data-i18n="save_changes">Guardar Cambios</button>
                 </div>
             </form>

@@ -827,6 +827,39 @@ tr:hover td {
   color: var(--text-primary);
 }
 
+.btn-cancel {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+}
+
 /* ---------- Add Section ---------- */
 .add-card {
   background: var(--bg-card);
@@ -997,6 +1030,7 @@ tr:hover td {
     display: none;
   }
 }
+
 /* ---------- Language Toggle ---------- */
 .lang-toggle {
   display: flex;
@@ -1036,6 +1070,7 @@ tr:hover td {
     flex-direction: column;
     padding: 24px;
   }
+
   .header-right {
     order: -1;
     align-self: flex-end;

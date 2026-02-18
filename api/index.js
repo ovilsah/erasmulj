@@ -10,7 +10,7 @@ let conn = null;
 const mongoUri = process.env.MONGODB_URI;
 
 if (!mongoUri) {
-  console.error("❌ MONGODB_URI is missing in environment variables.");
+    console.error("❌ MONGODB_URI is missing in environment variables.");
 }
 
 const connectDB = async () => {
@@ -29,7 +29,11 @@ const connectDB = async () => {
 };
 
 const studentSchema = new mongoose.Schema({
-    nom: String, carrera: String, origen: String, telefon: String
+    nom: String,
+    carrera: String,
+    origen: String,
+    telefon: String,
+    semestre: { type: String, enum: ['1r', '2n', 'Anual'], default: '1r' }
 });
 // Avoid recompiling model if hot-reloaded
 const Student = mongoose.models.Student || mongoose.model('Student', studentSchema);
@@ -53,7 +57,7 @@ app.get('/data', async (req, res) => {
 });
 
 app.post('/add', async (req, res) => {
-    const { nom, carrera, origen, telefon } = req.body;
+    const { nom, carrera, origen, telefon, semestre } = req.body;
     if (!nom || !carrera || !origen) return res.status(400).json({ error: 'Missing fields' });
 
     try {
@@ -62,7 +66,8 @@ app.post('/add', async (req, res) => {
             nom: nom.trim(),
             carrera: normalizeCarrera(carrera),
             origen: origen.trim(),
-            telefon: (telefon || "").trim()
+            telefon: (telefon || "").trim(),
+            semestre: semestre || '1r'
         });
         await student.save();
         res.json({ success: true, student });
@@ -71,18 +76,47 @@ app.post('/add', async (req, res) => {
     }
 });
 
-app.post('/update', async (req, res) => {
-    const { students } = req.body;
-    if (!Array.isArray(students)) return res.status(400).json({ error: 'Invalid data' });
+// Atomic Update
+app.put('/update/:id', async (req, res) => {
+    const { id } = req.params;
+    const { nom, carrera, origen, telefon, semestre } = req.body;
 
     try {
         await connectDB();
-        const normalized = students.map(s => ({ ...s, carrera: normalizeCarrera(s.carrera) }));
-        await Student.deleteMany({});
-        await Student.insertMany(normalized);
-        res.json({ success: true });
+        const updatedStudent = await Student.findByIdAndUpdate(
+            id,
+            {
+                nom: nom.trim(),
+                carrera: normalizeCarrera(carrera),
+                origen: origen.trim(),
+                telefon: (telefon || "").trim(),
+                semestre: semestre || '1r'
+            },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedStudent) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        res.json({ success: true, student: updatedStudent });
     } catch (err) {
         res.status(500).json({ error: 'Update failed' });
+    }
+});
+
+// Atomic Delete
+app.delete('/delete/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await connectDB();
+        const result = await Student.findByIdAndDelete(id);
+        if (!result) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Delete failed' });
     }
 });
 

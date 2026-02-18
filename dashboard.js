@@ -43,7 +43,15 @@ const TRANSLATIONS = {
         success_add: "añadido correctamente!",
         success_add_local: "añadido localmente!",
         city_label: "Ciudad",
-        career_label: "Carrera"
+        career_label: "Carrera",
+        semester_label: "Semestre",
+        sem_1: "1r Semestre",
+        sem_2: "2n Semestre",
+        sem_annual: "Anual",
+        delete: "Eliminar",
+        confirm_delete: "¿Estás seguro de que quieres eliminar a este estudiante?",
+        success_update: "Estudiante actualizado!",
+        success_delete: "Estudiante eliminado!"
     },
     ca: {
         header_title: "Erasmus Ljubljana 26/27",
@@ -84,7 +92,15 @@ const TRANSLATIONS = {
         success_add: "afegit correctament!",
         success_add_local: "afegit localment!",
         city_label: "Ciutat",
-        career_label: "Carrera"
+        career_label: "Carrera",
+        semester_label: "Semestre",
+        sem_1: "1r Semestre",
+        sem_2: "2n Semestre",
+        sem_annual: "Anual",
+        delete: "Eliminar",
+        confirm_delete: "Estàs segur que vols eliminar aquest estudiant?",
+        success_update: "Estudiant actualitzat!",
+        success_delete: "Estudiant eliminat!"
     }
 };
 
@@ -140,7 +156,7 @@ async function init() {
     setupLangToggle();
     initMap();
     updateStats();
-    updateUI(); 
+    updateUI();
 }
 
 // -------- Language --------
@@ -163,7 +179,7 @@ function setLanguage(lang) {
     document.documentElement.lang = lang;
     updateUI();
     renderTable();
-    filterStudents(); 
+    filterStudents();
     if (map) { map.remove(); initMap(); }
 }
 
@@ -314,6 +330,7 @@ function showResults(filtered, title) {
       <div class="card-detail"><span class="material-icons-round">school</span>${escapeHtml(s.carrera)}</div>
       <div class="card-detail"><span class="material-icons-round">place</span>${escapeHtml(s.origen)}</div>
       ${s.telefon ? `<div class="card-detail"><span class="material-icons-round">phone</span>${escapeHtml(s.telefon)}</div>` : ''}
+      <div class="card-detail"><span class="material-icons-round">event</span>${s.semestre ? (s.semestre === '1r' ? t('sem_1') : s.semestre === '2n' ? t('sem_2') : t('sem_annual')) : t('sem_1')}</div>
     </div>`).join('');
     section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -339,12 +356,14 @@ function renderTable() {
     );
     body.innerHTML = filtered.map((s) => {
         const realIndex = students.indexOf(s);
+        const semLabel = s.semestre === '1r' ? t('sem_1') : s.semestre === '2n' ? t('sem_2') : (s.semestre === 'Anual' ? t('sem_annual') : t('sem_1'));
         return `
         <tr>
             <td><strong>${escapeHtml(s.nom)}</strong></td>
             <td>${escapeHtml(s.carrera)}</td>
             <td>${escapeHtml(s.origen)}</td>
             <td>${escapeHtml(s.telefon || '-')}</td>
+            <td>${semLabel}</td>
             <td><button class="btn-icon" onclick="openEditModal(${realIndex})"><span class="material-icons-round">edit</span></button></td>
         </tr>`}).join('');
 }
@@ -353,25 +372,69 @@ function setupEditModal() {
     const modal = document.getElementById('edit-modal');
     const closeBtn = document.getElementById('close-modal');
     const cancelBtn = document.getElementById('cancel-edit');
+    const deleteBtn = document.getElementById('delete-student');
     const form = document.getElementById('edit-form');
     if (!modal) return;
+
     const closeModal = () => modal.classList.remove('active');
+
     if (closeBtn) closeBtn.onclick = closeModal;
     if (cancelBtn) cancelBtn.onclick = closeModal;
     window.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            if (!confirm(t('confirm_delete'))) return;
+            const idx = parseInt(document.getElementById('edit-index').value);
+            const student = students[idx];
+            if (!student || !student._id) return;
+
+            try {
+                const res = await fetch(`/api/delete/${student._id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    students.splice(idx, 1);
+                    computeUniques(); updateStats(); renderTable();
+                    if (map) { map.remove(); initMap(); }
+                    closeModal();
+                    showFeedback('success', t('success_delete'));
+                } else alert('Error deleting');
+            } catch (e) { console.error(e); alert('Error deleting'); }
+        };
+    }
+
     if (form) {
         form.onsubmit = async (e) => {
             e.preventDefault();
             const idx = parseInt(document.getElementById('edit-index').value);
-            students[idx] = {
+            const student = students[idx];
+            if (!student || !student._id) return; // Should have _id from DB
+
+            const updatedData = {
                 nom: document.getElementById('edit-name').value.trim(),
                 carrera: document.getElementById('edit-career').value.trim(),
                 origen: document.getElementById('edit-origin').value.trim(),
-                telefon: document.getElementById('edit-phone').value.trim()
+                telefon: document.getElementById('edit-phone').value.trim(),
+                semestre: document.getElementById('edit-semester').value
             };
-            await saveAllData(); computeUniques(); updateStats(); renderTable();
-            if (map) { map.remove(); initMap(); }
-            closeModal();
+
+            try {
+                const res = await fetch(`/api/update/${student._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    students[idx] = data.student; // Update local state with server response
+                    computeUniques(); updateStats(); renderTable();
+                    if (map) { map.remove(); initMap(); }
+                    closeModal();
+                    showFeedback('success', t('success_update'));
+                } else {
+                    alert('Error updating');
+                }
+            } catch (e) { console.error('Update failed:', e); alert('Update failed'); }
         };
     }
 }
@@ -385,18 +448,9 @@ window.openEditModal = (idx) => {
     document.getElementById('edit-career').value = s.carrera;
     document.getElementById('edit-origin').value = s.origen;
     document.getElementById('edit-phone').value = s.telefon || '';
+    document.getElementById('edit-semester').value = s.semestre || '1r';
     modal.classList.add('active');
 };
-
-async function saveAllData() {
-    try {
-        await fetch('/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ students })
-        });
-    } catch (e) { console.error('Save failed:', e); }
-}
 
 async function initMap() {
     const mapContainer = document.getElementById('map-container');
@@ -476,16 +530,21 @@ function setupAddForm() {
         const carrera = document.getElementById('add-career').value.trim();
         const origen = document.getElementById('add-origin').value.trim();
         const telefon = document.getElementById('add-phone').value.trim();
+        const semestre = document.getElementById('add-semester').value;
+
         if (!nom || !carrera || !origen) return;
-        const newStudent = { nom, carrera, origen, telefon };
+        const newStudent = { nom, carrera, origen, telefon, semestre };
         try {
             const res = await fetch('/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newStudent) });
             if (res.ok) {
-                students.push(newStudent); computeUniques(); updateStats(); renderTable();
+                const data = await res.json();
+                students.push(data.student || newStudent);
+                computeUniques(); updateStats(); renderTable();
                 if (map) { map.remove(); initMap(); }
                 e.target.reset(); showFeedback('success', `✓ ${nom} ${t('success_add')}`);
             } else throw new Error();
         } catch {
+            // Local fallback if offline/error (though for concurrency we rely on backend)
             students.push(newStudent); computeUniques(); updateStats(); renderTable();
             if (map) { map.remove(); initMap(); }
             e.target.reset(); showFeedback('success', `✓ ${nom} ${t('success_add_local')}`);
