@@ -2,9 +2,11 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const DATA_FILE = path.join(__dirname, 'data.json');
 const EXCEL_FILE = path.join(__dirname, 'dadeserasmus.xlsx');
@@ -13,32 +15,60 @@ const EXCEL_FILE = path.join(__dirname, 'dadeserasmus.xlsx');
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// MongoDB Setup
+const mongoUri = process.env.MONGODB_URI;
+let useMongo = false;
+
+if (mongoUri) {
+    mongoose.connect(mongoUri)
+        .then(() => {
+            console.log('✅ Connected to MongoDB');
+            useMongo = true;
+            // Optionally migrate data if DB is empty
+            migrateDataIfNeeded();
+        })
+        .catch(err => console.error('❌ MongoDB Connection Error:', err));
+}
+
+// Student Schema
+const studentSchema = new mongoose.Schema({
+    nom: String,
+    carrera: String,
+    origen: String,
+    telefon: String
+});
+const Student = mongoose.model('Student', studentSchema);
+
 // Helper to normalize engineering career names
 function normalizeCarrera(carrera) {
     if (!carrera) return "";
-    // Normalize various forms to "Ingeniería"
     return carrera.replace(/Enginyeria|Ingenieria|Ingenería|Ingeneria|Ing\./gi, "Ingeniería").trim();
 }
 
 // GET /data — return current student data
-app.get('/data', (req, res) => {
+app.get('/data', async (req, res) => {
     try {
+        if (useMongo) {
+            const students = await Student.find({});
+            return res.json(students);
+        }
+        // Fallback to local file
         const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
         res.json(data);
     } catch (err) {
-        res.status(500).json({ error: 'Could not read data file' });
+        res.status(500).json({ error: 'Could not read data' });
     }
 });
 
 // POST /add — add a new student
-app.post('/add', (req, res) => {
+app.post('/add', async (req, res) => {
     const { nom, carrera, origen, telefon } = req.body;
 
     if (!nom || !carrera || !origen) {
         return res.status(400).json({ error: 'Missing fields: nom, carrera, origen' });
     }
 
-    const newStudent = {
+    const newStudentData = {
         nom: nom.trim(),
         carrera: normalizeCarrera(carrera),
         origen: origen.trim(),
@@ -46,23 +76,28 @@ app.post('/add', (req, res) => {
     };
 
     try {
+        if (useMongo) {
+            const student = new Student(newStudentData);
+            await student.save();
+            console.log(`✓ Added to DB: ${nom}`);
+            return res.json({ success: true, student });
+        }
+
+        // Local File logic
         const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-        data.push(newStudent);
+        data.push(newStudentData);
         fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-
-        // Update Excel file
         saveToExcel(data);
-
-        console.log(`✓ Added student: ${nom}`);
-        res.json({ success: true, student: newStudent });
+        console.log(`✓ Added to File: ${nom}`);
+        res.json({ success: true, student: newStudentData });
     } catch (err) {
         console.error('Error adding student:', err);
         res.status(500).json({ error: 'Could not save student' });
     }
 });
 
-// POST /update — update student records
-app.post('/update', (req, res) => {
+// POST /update — update student records (full sync/edit)
+app.post('/update', async (req, res) => {
     const { students } = req.body;
 
     if (!Array.isArray(students)) {
@@ -70,13 +105,22 @@ app.post('/update', (req, res) => {
     }
 
     try {
-        // Save to JSON
+        if (useMongo) {
+            // Full replace strategy for simplicity (matches local file behavior)
+            await Student.deleteMany({});
+            const docs = students.map(s => ({
+                ...s,
+                carrera: normalizeCarrera(s.carrera)
+            }));
+            await Student.insertMany(docs);
+            console.log(`✓ Updated DB with ${docs.length} records`);
+            return res.json({ success: true });
+        }
+
+        // Local File logic
         fs.writeFileSync(DATA_FILE, JSON.stringify(students, null, 2), 'utf-8');
-
-        // Save to Excel
         saveToExcel(students);
-
-        console.log(`✓ Updated ${students.length} student records`);
+        console.log(`✓ Updated File with ${students.length} records`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error updating students:', err);
@@ -84,21 +128,36 @@ app.post('/update', (req, res) => {
     }
 });
 
+async function migrateDataIfNeeded() {
+    try {
+        const count = await Student.countDocuments();
+        if (count === 0 && fs.existsSync(DATA_FILE)) {
+            console.log('Migrating local data to MongoDB...');
+            const localData = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+            if (localData.length > 0) {
+                await Student.insertMany(localData);
+                console.log(`Migrated ${localData.length} students.`);
+            }
+        }
+    } catch (e) { console.error('Migration failed:', e); }
+}
+
 function saveToExcel(students) {
-    const wb = XLSX.utils.book_new();
-    // Map to Excel format (uppercase keys)
-    const excelData = students.map(s => ({
-        'Nom': s.nom,
-        'Carrera': s.carrera,
-        'Origen': s.origen,
-        'Telèfon': s.telefon || ""
-    }));
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Dades');
-    XLSX.writeFile(wb, EXCEL_FILE);
+    try {
+        const wb = XLSX.utils.book_new();
+        const excelData = students.map(s => ({
+            'Nom': s.nom,
+            'Carrera': s.carrera,
+            'Origen': s.origen,
+            'Telèfon': s.telefon || ""
+        }));
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Dades');
+        XLSX.writeFile(wb, EXCEL_FILE);
+    } catch (e) { console.error('Excel save failed:', e); }
 }
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`\n🎓 Erasmus Ljubljana 26/27 running at http://localhost:${PORT}\n`);
+    console.log(`\n🎓 Erasmus Dashboard running at http://localhost:${PORT}\n`);
 });
