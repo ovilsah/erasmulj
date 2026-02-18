@@ -397,7 +397,7 @@ function setupEditModal() {
             if (!student || !student._id) return;
 
             try {
-                const res = await fetch(`/api/delete/${student._id}`, { method: 'DELETE' });
+                const res = await fetch(`/delete/${student._id}`, { method: 'DELETE' });
                 if (res.ok) {
                     students.splice(idx, 1);
                     computeUniques(); updateStats(); renderTable();
@@ -425,7 +425,7 @@ function setupEditModal() {
             };
 
             try {
-                const res = await fetch(`/api/update/${student._id}`, {
+                const res = await fetch(`/update/${student._id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updatedData)
